@@ -54,22 +54,15 @@ export default function KindnessTracker() {
     }
   }, [])
 
+  // Save to localStorage whenever name or flowers changes
+  useEffect(() => {
+    const data: TrackerData = { name, flowers }
+    localStorage.setItem("kindnessTracker", JSON.stringify(data))
+  }, [name, flowers])
+
   // Handle coloring a flower
   const handleColorFlower = (id: number) => {
     setFlowers((prev) => prev.map((flower) => (flower.id === id ? { ...flower, color: selectedColor } : flower)))
-  }
-
-  // Save progress to localStorage
-  const saveToLocalStorage = () => {
-    const data: TrackerData = {
-      name,
-      flowers,
-    }
-    localStorage.setItem("kindnessTracker", JSON.stringify(data))
-    toast({
-      title: "Progress Saved",
-      description: "Your kindness tracker has been saved to your browser.",
-    })
   }
 
   // Clear all flowers back to initial state with direct confirmation
