@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Flower } from "@/components/flower"
 import { ColorPicker } from "@/components/color-picker"
-import { Download, Share2, Save, RefreshCw } from "lucide-react"
+import { Download, Share2, Save, RefreshCw, ChevronRight } from "lucide-react"
 import html2canvas from "html2canvas"
 import { jsPDF } from "jspdf"
 import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/components/ui/use-toast"
+import { shapes, getShapeById, getNextShape } from "@/components/flower-shapes"
 
 // Define the tracker data structure
 interface TrackerData {
@@ -18,6 +19,7 @@ interface TrackerData {
     id: number
     color: string
   }[]
+  shapeId?: string
 }
 
 // Default colors for the color picker (no eraser/white)
@@ -37,6 +39,8 @@ export default function KindnessTracker() {
   const [flowers, setFlowers] = useState<{ id: number; color: string }[]>(
     Array.from({ length: 36 }, (_, i) => ({ id: i, color: "transparent" })),
   )
+  const [currentShapeId, setCurrentShapeId] = useState("flower")
+  const currentShape = getShapeById(currentShapeId)
   const trackerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
@@ -48,17 +52,20 @@ export default function KindnessTracker() {
         const parsedData: TrackerData = JSON.parse(savedData)
         setName(parsedData.name)
         setFlowers(parsedData.flowers)
+        if (parsedData.shapeId) {
+          setCurrentShapeId(parsedData.shapeId)
+        }
       } catch (error) {
         console.error("Error loading data from localStorage:", error)
       }
     }
   }, [])
 
-  // Save to localStorage whenever name or flowers changes
+  // Save to localStorage whenever name, flowers, or shape changes
   useEffect(() => {
-    const data: TrackerData = { name, flowers }
+    const data: TrackerData = { name, flowers, shapeId: currentShapeId }
     localStorage.setItem("kindnessTracker", JSON.stringify(data))
-  }, [name, flowers])
+  }, [name, flowers, currentShapeId])
 
   // Handle coloring a flower
   const handleColorFlower = (id: number) => {
@@ -75,12 +82,13 @@ export default function KindnessTracker() {
       const data: TrackerData = {
         name,
         flowers: Array.from({ length: 36 }, (_, i) => ({ id: i, color: "transparent" })),
+        shapeId: currentShapeId, // Preserve the current shape
       }
       localStorage.setItem("kindnessTracker", JSON.stringify(data))
 
       toast({
         title: "All Cleared",
-        description: "All flowers have been reset to their initial state.",
+        description: `All ${currentShape.name.toLowerCase()}s have been reset to their initial state.`,
       })
     }
   }
@@ -180,6 +188,18 @@ export default function KindnessTracker() {
     setSelectedColor(color)
   }
 
+  // Handle changing to the next shape
+  const handleNextShape = () => {
+    const nextShape = getNextShape(currentShapeId)
+    setCurrentShapeId(nextShape.id)
+
+    toast({
+      title: `Shape Changed to ${nextShape.name}`,
+      description: `Your kindness tracker now uses the ${nextShape.name.toLowerCase()} shape.`,
+      duration: 2000,
+    })
+  }
+
   return (
     <div className="w-full max-w-md mx-auto p-2 bg-white rounded-lg shadow-md flex flex-col gap-4 sm:max-w-lg md:max-w-xl lg:max-w-2xl xl:max-w-3xl"
       style={{ minHeight: '100vh', boxSizing: 'border-box' }}>
@@ -198,7 +218,19 @@ export default function KindnessTracker() {
           className="worksheet-font mb-1 text-xs sm:text-base px-2 py-1 rounded-none border-0 border-b-2 border-gray-300 focus:border-blue-400 focus:ring-0 w-60 sm:w-80 text-center"
         />
       </div>
-      <div className="worksheet-font text-center text-sm sm:text-base mb-2">Color a flower for each act of kindness.</div>
+      <div className="flex items-center justify-center gap-2 mb-2">
+        <div className="worksheet-font text-center text-sm sm:text-base">Color a {currentShape.name.toLowerCase()} for each act of kindness.</div>
+        <Button
+          onClick={handleNextShape}
+          variant="outline"
+          size="sm"
+          className="p-1 h-7 rounded-full hover:bg-gray-100 flex items-center gap-1 text-xs"
+          title={`Change to next shape`}
+        >
+          <span className="hidden sm:inline">Next Shape</span>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
       <div
         ref={trackerRef}
         className="grid grid-cols-6 gap-[0.25rem] w-fit mx-auto bg-white p-2 rounded-md border-0 sm:border border-gray-200"
@@ -210,6 +242,7 @@ export default function KindnessTracker() {
             color={flower.color}
             onClick={() => handleColorFlower(flower.id)}
             className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 cursor-pointer transition-transform duration-150 hover:scale-110"
+            shape={currentShape}
           />
         ))}
       </div>
@@ -257,7 +290,7 @@ export default function KindnessTracker() {
       </a>
       </div>
       {/* Hidden credit link */}
-      
+
       <Toaster />
     </div>
   )
